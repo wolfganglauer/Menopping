@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Indoor-Navigation · Mhopping</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<meta name="theme-color" content="#2f7d5d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="IndoorNav">
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --ink:#1a1d21; --muted:#6b7280; --line:#e6e8ec;
+    --brand:#2f7d5d; --brand-soft:#e8f4ee; --blue:#2563eb; --blue-soft:#eef3ff;
+    --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06); --radius:14px;
+    --dot:#2563eb; --route:#2f7d5d; --node-cat:#c7ccd4; --node-special:#1a1d21;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;padding:24px 16px 90px}
+  .app{max-width:960px;margin:0 auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-bottom:14px}
+  h1,h2,h3{margin:0 0 8px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:650;letter-spacing:-.01em}
+  .brand .dot{width:30px;height:30px;border-radius:9px;background:var(--brand-soft);display:grid;place-items:center;font-size:16px}
+  .tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+  .tab{border:none;background:transparent;padding:8px 14px;border-radius:999px;cursor:pointer;color:var(--muted);font-weight:550;font:inherit}
+  .tab.active{background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow)}
+  .view{display:none}
+  .view.active{display:block}
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  select,input,textarea,button{font:inherit;color:inherit}
+  .ctl{background:#fff;border:1px solid var(--line);border-radius:10px;padding:9px 12px;outline:none;width:100%}
+  .ctl:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:550;transition:.15s}
+  .btn:hover{background:#f3f4f6}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn-primary:hover{background:#26674c}
+  .btn-blue{background:var(--blue);border-color:var(--blue);color:#fff}
+  .btn-blue:hover{background:#1d4ed8}
+  .btn-danger{color:#9a3412;border-color:#f3e2c8;background:#fff8ee}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+  .row > div{flex:1 1 140px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .status{display:flex;align-items:center;gap:8px;font-size:13.5px;padding:8px 12px;border-radius:10px;background:#fbfcfd;border:1px solid var(--line)}
+  .status.ok{background:var(--brand-soft);color:#1f5e45;border-color:transparent}
+  .status.warn{background:#fff8ee;color:#7c4a11;border-color:#f3e2c8}
+  .status.err{background:#fdf1e7;color:#9a3412;border-color:transparent}
+  .muted{color:var(--muted);font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:8px}
+  th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:4px 6px}
+  td{padding:6px 6px;border-top:1px solid #f1f2f4;vertical-align:middle}
+  .pill{display:inline-flex;align-items:center;gap:5px;background:var(--brand-soft);color:#1f5e45;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600}
+  .pill.checkout{background:#fff4e5;color:#a15c07}
+  .pill.io{background:var(--blue-soft);color:#1d4ed8}
+  .icon-btn{border:none;background:none;cursor:pointer;color:var(--muted);padding:2px 6px;font-size:14px}
+  .icon-btn:hover{color:#9a3412}
+  svg.mapbox{width:100%;height:auto;background:#fbfcfd;border:1px solid var(--line);border-radius:12px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .sw{width:10px;height:10px;border-radius:3px;display:inline-block}
+  textarea.ctl{min-height:100px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+  .notebox{background:#fff8ee;border:1px solid #f3e2c8;color:#7c4a11;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.6;margin-bottom:14px}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;pointer-events:none;transition:.2s;background:#1a1d21;color:#fff;border-radius:12px;padding:11px 16px;font-size:14px;box-shadow:var(--shadow)}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .kpis{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:6px 0 10px}
+  .kpis b{display:block;color:var(--ink);font-size:18px;font-weight:660}
+  ul.route-order{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+  ul.route-order li{display:flex;justify-content:space-between;background:#fbfcfd;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:13.5px}
+  ul.route-order li b{font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand"><span class="dot">🧭</span> Indoor-Navigation</div>
+    <div class="muted" id="graphMeta">Kein Grundriss geladen</div>
+  </div>
+
+  <div class="notebox" id="installBanner" style="display:none">
+    <b>Als App installieren:</b> Safari unten → Teilen-Symbol (Quadrat mit Pfeil nach oben) → runterscrollen →
+    „Zum Home-Bildschirm“ → „Hinzufügen“. Danach über das neue Symbol öffnen (nicht mehr über Safari) – erst dann
+    läuft die App im Vollbild ohne Safari-Leiste, und Sensor-Berechtigungen funktionieren zuverlässig.
+  </div>
+
+  <div class="notebox">
+    <b>Umfang dieser Version:</b> Survey-basierte Kartierung + PDR-Positionsschätzung + Graph-Routing + Anbindung an die Einkaufsliste.
+    Die zuvor besprochene automatische Crowdsourcing-Verfeinerung (DTW-Signaturabgleich, Graph-Fusion über viele Einkäufe) ist <b>nicht</b> enthalten –
+    siehe Begründung unten in den Einstellungen. Ein-/Ausgang und Kasse werden über explizite Buttons markiert, nicht automatisch erkannt
+    (Browser haben keinen Zugriff auf WLAN-SSIDs, das war eine Vereinfachung in der Konzeptdiskussion).
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-view="survey">Kartierung</button>
+    <button class="tab" data-view="nav">Navigation</button>
+    <button class="tab" data-view="settings">Einstellungen</button>
+  </div>
+
+  <!-- ===================== TAB: KARTIERUNG ===================== -->
+  <div class="view active" id="view-survey">
+
+    <div class="card">
+      <h3>Grundriss</h3>
+      <div class="row">
+        <div><label>Marktname</label><input class="ctl" id="storeName" placeholder="z. B. REWE Bamberg Breitenau 2"></div>
+        <div style="flex:0 0 auto"><button class="btn btn-danger" id="btnResetGraph">Grundriss löschen</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Sensoren</h3>
+      <div id="sensorStatus" class="status warn">Sensoren nicht aktiviert</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn btn-primary" id="btnEnableSensors">Bewegungssensoren aktivieren</button>
+        <span class="muted">Erfordert Klick (Browser-Vorgabe) und ggf. iOS-Bestätigung. Ohne Sensoren: unten manuell steuern.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Wegpunkt hinzufügen</h3>
+      <div class="row">
+        <div><label>Name</label><input class="ctl" id="wpName" placeholder="z. B. Kasse 1"></div>
+        <div><label>Typ</label>
+          <select class="ctl" id="wpType">
+            <option value="entrance">Eingang</option>
+            <option value="exit">Ausgang</option>
+            <option value="checkout">Kasse</option>
+            <option value="category" selected>Warengruppe</option>
+          </select>
+        </div>
+        <div id="wpCatWrap"><label>Warengruppe</label>
+          <select class="ctl" id="wpCategory"></select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div><label>X (m)</label><input class="ctl" id="wpX" type="number" step="0.1" value="0"></div>
+        <div><label>Y (m)</label><input class="ctl" id="wpY" type="number" step="0.1" value="0"></div>
+        <div style="flex:0 0 auto"><button class="btn" id="btnUseLivePos" type="button">Aktuelle Position übernehmen</button></div>
+      </div>
+      <div class="row" style="margin-top:10px;align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-size:13px;font-weight:500;color:var(--ink)">
+          <input type="checkbox" id="wpAutoConnect" checked style="width:auto"> Automatisch mit zuletzt gesetztem Wegpunkt verbinden
+        </label>
+        <button class="btn btn-primary" id="btnAddWaypoint" type="button" style="margin-left:auto">Wegpunkt speichern</button>
+      </div>
+      <div class="hint">Schrittlänge/Schwellenwerte für „aktuelle Position“ unter Einstellungen. Ohne Sensoren: Koordinaten von Hand eintragen (z. B. anhand eines eigenen Grundriss-Maßes in Metern, Eingang = 0,0).</div>
+    </div>
+
+    <div class="card">
+      <h3>Wegpunkte (<span id="nodeCount">0</span>)</h3>
+      <table id="nodeTable"><thead><tr><th>Name</th><th>Typ</th><th>X</th><th>Y</th><th></th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card">
+      <h3>Kante manuell hinzufügen</h3>
+      <div class="row">
+        <div><label>Von</label><select class="ctl" id="edgeA"></select></div>
+        <div><label>Nach</label><select class="ctl" id="edgeB"></select></div>
+        <div><label>Distanz (m, optional)</label><input class="ctl" id="edgeDist" type="number" step="0.1" placeholder="auto (Luftlinie)"></div>
+        <div style="flex:0 0 auto"><button class="btn btn-primary" id="btnAddEdge" type="button">Verbinden</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Vorschau</h3>
+      <div id="surveyMap"></div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--node-special)"></i>Eingang/Ausgang/Kasse</span>
+        <span><i class="sw" style="background:var(--node-cat)"></i>Warengruppe</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Import / Export</h3>
+      <textarea class="ctl" id="graphJson" placeholder="Grundriss-JSON hier einfügen zum Importieren, oder über 'Exportieren' hier ausgeben lassen"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="btnExportGraph" type="button">Exportieren (in Textfeld)</button>
+        <button class="btn" id="btnImportGraph" type="button">Importieren (aus Textfeld)</button>
+        <button class="btn" id="btnDownloadGraph" type="button">Als Datei herunterladen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TAB: NAVIGATION ===================== -->
+  <div class="view" id="view-nav">
+
+    <div class="card">
+      <h3>Sensoren &amp; Position</h3>
+      <div id="navSensorStatus" class="status warn">Sensoren nicht aktiviert</div>
+      <div class="kpis">
+        <div>Schritte<b id="kpiSteps">0</b></div>
+        <div>Position<b id="kpiPos">0.0 / 0.0 m</b></div>
+        <div>Blickrichtung<b id="kpiHeading">0°</b></div>
+      </div>
+      <div class="row">
+        <button class="btn btn-primary" id="btnEnableSensorsNav">Sensoren aktivieren</button>
+        <button class="btn" id="btnStepFwd" type="button">↑ Schritt</button>
+        <button class="btn" id="btnTurnL" type="button">↺ 15°</button>
+        <button class="btn" id="btnTurnR" type="button">↻ 15°</button>
+      </div>
+      <div class="hint">Die drei Buttons rechts sind die manuelle Ersatzsteuerung für Geräte/Umgebungen ohne nutzbare Bewegungssensoren – auch ein sinnvoller Test-/Vorführmodus.</div>
+    </div>
+
+    <div class="card">
+      <h3>Einkaufsliste</h3>
+      <div id="listStatus" class="status warn">Keine Einkaufsliste gefunden</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="btnRefreshList" type="button">Aktualisieren</button>
+      </div>
+      <details style="margin-top:10px">
+        <summary class="muted" style="cursor:pointer">Manuell importieren (falls automatische Verbindung nicht funktioniert)</summary>
+        <div class="hint">In der Einkaufsliste-App per Browser-Konsole ausführen: <code>copy(localStorage.getItem('sl.items'))</code>, dann hier einfügen. Zuverlässiger: beide Seiten über denselben lokalen Server statt file:// öffnen.</div>
+        <textarea class="ctl" id="listJson" style="margin-top:6px"></textarea>
+        <button class="btn" id="btnImportList" type="button" style="margin-top:6px">Importieren</button>
+      </details>
+    </div>
+
+    <div class="card">
+      <h3>Route</h3>
+      <div class="row">
+        <button class="btn btn-primary" id="btnPlanRoute" type="button">Route berechnen</button>
+        <button class="btn btn-blue" id="btnStartTrip" type="button">Einkauf starten</button>
+        <button class="btn" id="btnCheckout" type="button">An Kasse angekommen</button>
+        <button class="btn" id="btnEndTrip" type="button">Laden verlassen</button>
+      </div>
+      <div id="routeSummary" class="muted" style="margin-top:8px">Noch keine Route berechnet.</div>
+      <ul class="route-order" id="routeOrder"></ul>
+      <div id="routeAmbiguous" class="status warn" style="display:none;margin-top:8px"></div>
+      <div id="dwellHint" style="display:none;margin-top:10px" class="status warn">
+        <span id="dwellText"></span>
+        <button class="btn" id="btnConfirmCheckoutDwell" type="button" style="margin-left:8px">Ja, das ist die Kasse</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Karte</h3>
+      <div id="navMap"></div>
+    </div>
+  </div>
+
+  <!-- ===================== TAB: EINSTELLUNGEN ===================== -->
+  <div class="view" id="view-settings">
+    <div class="card">
+      <h3>PDR-Parameter</h3>
+      <div class="grid2">
+        <div><label>Schrittlänge (m)</label><input class="ctl" id="cfgStepLen" type="number" step="0.05" value="0.7"></div>
+        <div><label>Schritt-Schwellenwert (Beschleunigungs-Magnitude, g)</label><input class="ctl" id="cfgThreshold" type="number" step="0.05" value="1.2"></div>
+        <div><label>Min. Schrittabstand (ms)</label><input class="ctl" id="cfgMinInterval" type="number" step="10" value="250"></div>
+        <div><label>Stillstand-Schwelle für Kassen-Hinweis (Sek.)</label><input class="ctl" id="cfgDwellSec" type="number" step="5" value="60"></div>
+      </div>
+      <div class="hint">
+        Standardwerte sind grobe Literaturschätzungen (durchschnittliche Schrittlänge Erwachsener), <b>nicht individuell kalibriert</b>.
+        Sie sollten anhand einer echten Referenzstrecke (z. B. 50 m abgehen, Schrittzahl vergleichen) angepasst werden – das konnte
+        in dieser Umgebung nicht getestet werden, da kein reales Gerät verfügbar ist.
+      </div>
+      <button class="btn btn-primary" id="btnSaveSettings" type="button" style="margin-top:10px">Speichern</button>
+    </div>
+
+    <div class="card">
+      <h3>Installation &amp; Verbindung</h3>
+      <div id="installDiag" class="hint">wird geprüft…</div>
+    </div>
+
+    <div class="card">
+      <h3>Was hier bewusst fehlt (Stand dieser Version)</h3>
+      <div class="hint">
+        <b>1. Crowdsourcing-Verfeinerung (Phase 2):</b> Automatisches Verschmelzen vieler Einkaufs-Trajektorien zu einer sich selbst
+        verbessernden Karte (DTW-Signaturabgleich, Graph-Optimierung) ist nicht implementiert. Das ist ein eigenständiges,
+        forschungsnahes Vorhaben – eine ungetestete Attrappe davon auszuliefern würde genau der Teststand-Vorgabe widersprechen,
+        die für dieses Projekt gilt. Eine Erweiterungsstelle ist vorbereitet (<code>Core.fuseCandidateTrajectory</code>, wirft aktuell bewusst einen Fehler).<br><br>
+        <b>2. Automatische Ein-/Ausgangserkennung:</b> Browser haben keinen Zugriff auf WLAN-SSIDs oder Innen/Außen-Sensorik – das
+        wurde in der Konzeptphase als möglicher Trigger genannt, ist technisch im Browser aber nicht umsetzbar. Start/Ende der
+        Session werden stattdessen über Buttons markiert.<br><br>
+        <b>3. Magnetfeld-/WLAN-Fingerprinting:</b> Nicht implementiert (gehört zu Phase 2).<br><br>
+        <b>4. Reale Sensor-Validierung:</b> Die PDR-Logik (Schritterkennung, Heading-Filter) wurde ausschließlich gegen synthetische
+        Bewegungsdaten getestet (siehe Testprotokoll unten), nicht gegen ein reales Gerät oder echtes Gehen im Markt.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Testprotokoll dieser Auslieferung</h3>
+      <div class="hint" id="testProtocol">wird beim Laden eingefügt…</div>
+    </div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script id="core-module">
+/* ============================================================
+   CORE — reine Logik, keine DOM-/Browser-Abhängigkeit.
+   Dieser Block wird 1:1 für Node-Unit-Tests extrahiert (siehe
+   Testprotokoll) – der getestete Code ist identisch mit dem
+   ausgelieferten Code, keine separate Kopie.
+   ============================================================ */
+var Core = (function(){
+  "use strict";
+
+  // Aus einkaufsliste_4_.html übernommen (identische Kategorisierung,
+  // damit Warengruppen-Zonen hier und Einkaufsliste dort übereinstimmen).
+  const CATALOG = [
+    ["vollmilch|milch|h-milch", 1.19, "l", "food"], ["butter", 2.29, "Stk", "food"],
+    ["joghurt", 0.89, "Stk", "food"], ["quark", 1.09, "Stk", "food"], ["sahne", 1.05, "Stk", "food"],
+    ["käse|gouda|emmentaler", 2.49, "Pck", "food"], ["frischkäse", 1.39, "Stk", "food"],
+    ["mozzarella", 0.99, "Stk", "food"], ["eier", 2.79, "Pck", "food"],
+    ["brot|vollkornbrot", 2.19, "Stk", "bake"], ["brötchen", 0.45, "Stk", "bake"],
+    ["toast", 1.29, "Pck", "bake"], ["kuchen|croissant", 1.89, "Stk", "bake"],
+    ["nudeln|pasta|spaghetti", 1.49, "Pck", "food"], ["reis", 2.19, "Pck", "food"],
+    ["mehl", 1.09, "kg", "food"], ["zucker", 1.19, "kg", "food"], ["salz", 0.59, "Pck", "food"],
+    ["öl|olivenöl", 4.49, "Fl", "food"], ["kaffee", 6.49, "Pck", "food"], ["tee", 2.49, "Pck", "food"],
+    ["banane", 1.69, "kg", "green"], ["apfel|äpfel", 2.49, "kg", "green"], ["tomate", 2.79, "kg", "green"],
+    ["gurke", 0.99, "Stk", "green"], ["kartoffel", 1.79, "kg", "green"], ["zwiebel", 1.29, "kg", "green"],
+    ["paprika", 3.49, "kg", "green"], ["salat", 1.19, "Stk", "green"], ["karotte|möhre", 1.29, "kg", "green"],
+    ["zitrone", 0.55, "Stk", "green"], ["avocado", 1.49, "Stk", "green"],
+    ["beeren|erdbeer|himbeer|obst|gemüse", 2.99, "Pck", "green"],
+    ["hähnchen|hühner", 8.90, "kg", "meat"], ["hackfleisch", 7.90, "kg", "meat"],
+    ["rind|steak", 16.90, "kg", "meat"], ["schnitzel", 11.90, "kg", "meat"],
+    ["wurst|salami|schinken|fleisch", 1.99, "Pck", "meat"], ["lachs|fisch", 14.90, "kg", "food"],
+    ["tofu", 2.19, "Pck", "food"], ["hummus", 1.59, "Stk", "food"],
+    ["wasser|mineralwasser", 0.35, "Fl", "drink"], ["saft|orangensaft", 1.79, "Fl", "drink"],
+    ["cola|limo|limonade", 1.29, "Fl", "drink"], ["bier", 0.89, "Fl", "drink"], ["wein", 5.99, "Fl", "drink"],
+    ["tiefkühl|pizza", 2.49, "Stk", "food"], ["eis", 3.29, "Pck", "food"], ["pommes", 1.99, "Pck", "food"],
+    ["schokolade", 1.29, "Stk", "food"], ["chips", 1.79, "Pck", "food"], ["kekse", 1.49, "Pck", "food"],
+    ["müsli", 2.49, "Pck", "food"], ["konserve|dose|mais|bohnen", 0.99, "Stk", "food"],
+    ["ketchup|senf|mayo|soße", 1.69, "Fl", "food"],
+    ["spülmittel", 1.29, "Fl", "drug"], ["waschmittel", 4.99, "Pck", "drug"],
+    ["klopapier|toilettenpapier", 3.49, "Pck", "drug"], ["küchenrolle", 1.99, "Pck", "drug"],
+    ["müllbeutel", 2.29, "Pck", "drug"], ["putzmittel|reiniger", 1.99, "Fl", "drug"],
+    ["shampoo", 2.49, "Fl", "drug"], ["duschgel", 1.49, "Fl", "drug"], ["zahnpasta", 1.79, "Stk", "drug"],
+    ["seife", 1.19, "Stk", "drug"], ["windel", 8.99, "Pck", "drug"], ["creme|lotion", 2.99, "Stk", "drug"],
+    ["katzenfutter|hundefutter|tierfutter", 0.79, "Stk", "food"], ["batterien", 4.49, "Pck", "drug"]
+  ];
+  const CATEGORY_LABELS = {food:"Lebensmittel/Sonstiges", bake:"Backwaren", green:"Obst & Gemüse",
+    meat:"Fleisch & Fisch", drink:"Getränke", drug:"Drogerie"};
+
+  function hash(str){ let h=2166136261; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619);} return (h>>>0)/4294967295; }
+  function catalogEntry(name){
+    const n=String(name).toLowerCase().trim();
+    for(const [keys,price,unit,grp] of CATALOG)
+      for(const k of keys.split("|")) if(n.includes(k)) return {price,unit,grp};
+    return {price:1.49+hash(n)*3.2, unit:"Stk", grp:"food"};
+  }
+
+  // ---- Graph ----
+  function makeGraph(storeName){
+    return {storeName: storeName||"", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), nodes:[], edges:[]};
+  }
+  function addNode(graph, node){ graph.nodes.push(node); graph.updatedAt=new Date().toISOString(); return node; }
+  function removeNode(graph, id){
+    graph.nodes = graph.nodes.filter(n=>n.id!==id);
+    graph.edges = graph.edges.filter(e=>e.a!==id && e.b!==id);
+    graph.updatedAt=new Date().toISOString();
+  }
+  function addEdge(graph, a, b, dist){
+    if(a===b) return null;
+    if(graph.edges.some(e=>(e.a===a&&e.b===b)||(e.a===b&&e.b===a))) return null; // keine Duplikate
+    if(dist==null){
+      const na=graph.nodes.find(n=>n.id===a), nb=graph.nodes.find(n=>n.id===b);
+      dist = (na&&nb) ? Math.hypot(na.x-nb.x, na.y-nb.y) : 1;
+    }
+    const e = {a,b,dist:Math.max(0.1, dist)};
+    graph.edges.push(e); graph.updatedAt=new Date().toISOString();
+    return e;
+  }
+  function neighbors(graph, id){
+    const out=[];
+    graph.edges.forEach(e=>{
+      if(e.a===id) out.push({id:e.b, dist:e.dist});
+      if(e.b===id) out.push({id:e.a, dist:e.dist});
+    });
+    return out;
+  }
+  function dijkstra(graph, fromId, toId){
+    const dist = new Map(), prev = new Map(), visited = new Set();
+    graph.nodes.forEach(n=>dist.set(n.id, Infinity));
+    if(!dist.has(fromId) || !dist.has(toId)) return null;
+    dist.set(fromId, 0);
+    while(true){
+      let u=null, best=Infinity;
+      dist.forEach((d,id)=>{ if(!visited.has(id) && d<best){ best=d; u=id; } });
+      if(u===null) break;
+      if(u===toId) break;
+      visited.add(u);
+      neighbors(graph,u).forEach(({id,dist:w})=>{
+        const alt = dist.get(u)+w;
+        if(alt < dist.get(id)){ dist.set(id,alt); prev.set(id,u); }
+      });
+    }
+    const d = dist.get(toId);
+    if(d===undefined || d===Infinity) return null;
+    const path=[toId]; let cur=toId;
+    while(prev.has(cur)){ cur=prev.get(cur); path.unshift(cur); }
+    if(path[0]!==fromId) return fromId===toId ? {path:[fromId], distance:0} : null;
+    return {path, distance:d};
+  }
+  function nearestNode(graph, x, y, filterFn){
+    let best=null, bd=Infinity;
+    graph.nodes.forEach(n=>{
+      if(filterFn && !filterFn(n)) return;
+      const d=Math.hypot(n.x-x, n.y-y);
+      if(d<bd){ bd=d; best=n; }
+    });
+    return best;
+  }
+
+  // ---- PDR ----
+  function detectSteps(samples, opts){
+    opts = opts||{};
+    const threshold = opts.threshold ?? 1.2;
+    const minIntervalMs = opts.minIntervalMs ?? 250;
+    const steps = [];
+    let lastStepT = -Infinity;
+    for(let i=1;i<samples.length;i++){
+      const prev=samples[i-1].mag, cur=samples[i].mag;
+      if(prev < threshold && cur >= threshold && (samples[i].t-lastStepT) >= minIntervalMs){
+        steps.push(samples[i].t); lastStepT=samples[i].t;
+      }
+    }
+    return steps;
+  }
+  function applyStep(pos, headingRad, stepLenM){
+    return { x: pos.x + Math.cos(headingRad)*stepLenM, y: pos.y + Math.sin(headingRad)*stepLenM };
+  }
+  function wrapAngle(a){ return Math.atan2(Math.sin(a), Math.cos(a)); }
+  function complementaryHeading(prevHeadingRad, gyroDeltaRad, magHeadingRad, alpha){
+    alpha = alpha ?? 0.98;
+    const gyroHeading = prevHeadingRad + gyroDeltaRad;
+    if(magHeadingRad==null) return wrapAngle(gyroHeading);
+    const diff = wrapAngle(magHeadingRad - gyroHeading);
+    return wrapAngle(gyroHeading + (1-alpha)*diff);
+  }
+
+  // ---- Route-Planung (Greedy Nearest-Neighbour über Dijkstra, analog Außen-Routing) ----
+  // Wichtig: eine Warengruppe (grp, 6 grobe Buckets aus der Einkaufsliste) kann im Grundriss
+  // MEHREREN physisch getrennten Zonen entsprechen (z.B. "Milchregal" und "Tiefkühl" beide
+  // als grp "food"). Frühere Version nahm dafür immer den zuerst angelegten Knoten -- das
+  // führte dazu, dass eine zweite Zone derselben Kategorie nie in die Route aufgenommen wurde
+  // (per Test/Screenshot gefunden). Jetzt: pro verbleibender Kategorie wird über ALLE ihre
+  // Kandidatenknoten der jeweils nächste gewählt; Kategorien mit mehreren Knoten werden zudem
+  // als "ambiguous" zurückgegeben, weil nicht bekannt ist, in welcher der Zonen der konkrete
+  // Artikel tatsächlich liegt.
+  function planShoppingRoute(graph, fromNodeId, neededCategories){
+    const uniqueCats = [...new Set(neededCategories)];
+    const nodesByCat = {};
+    uniqueCats.forEach(cat=>{ nodesByCat[cat] = graph.nodes.filter(n=>n.type==="category" && n.category===cat); });
+
+    const missing = uniqueCats.filter(cat=>nodesByCat[cat].length===0);
+    const ambiguous = uniqueCats.filter(cat=>nodesByCat[cat].length>1)
+      .map(cat=>({cat, nodeNames: nodesByCat[cat].map(n=>n.name)}));
+
+    const order=[]; let cur=fromNodeId;
+    let remainingCats = uniqueCats.filter(cat=>nodesByCat[cat].length>0);
+    let totalDist=0; const fullPath=[];
+    while(remainingCats.length){
+      let bestCat=null, bestNode=null, bestRes=null;
+      remainingCats.forEach(cat=>{
+        nodesByCat[cat].forEach(node=>{
+          const res = dijkstra(graph, cur, node.id);
+          if(res && (!bestRes || res.distance < bestRes.distance)){ bestRes=res; bestNode=node; bestCat=cat; }
+        });
+      });
+      if(!bestCat) break;
+      order.push({cat:bestCat, node:bestNode, distance:bestRes.distance});
+      totalDist += bestRes.distance;
+      fullPath.push(...bestRes.path.slice(fullPath.length?1:0));
+      cur = bestNode.id;
+      remainingCats = remainingCats.filter(c=>c!==bestCat);
+    }
+    return {order, totalDist, fullPath, missing, unreachable: remainingCats.slice(), ambiguous};
+  }
+
+  // ---- Phase 2 Erweiterungsstelle (bewusst nicht implementiert) ----
+  function fuseCandidateTrajectory(){
+    throw new Error("Nicht implementiert: Crowdsourcing-Graph-Fusion ist Phase 2, siehe Einstellungen/Roadmap.");
+  }
+
+  return {
+    CATALOG, CATEGORY_LABELS, hash, catalogEntry,
+    makeGraph, addNode, removeNode, addEdge, neighbors, dijkstra, nearestNode,
+    detectSteps, applyStep, wrapAngle, complementaryHeading,
+    planShoppingRoute, fuseCandidateTrajectory
+  };
+})();
+if (typeof module !== "undefined" && module.exports) { module.exports = Core; }
+</script>
+
+<script>
+(function(){
+  "use strict";
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const rad2deg = r => Math.round(((r*180/Math.PI)%360+360)%360);
+
+  function toast(msg){
+    const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(toast._h); toast._h=setTimeout(()=>t.classList.remove("show"), 2600);
+  }
+
+  /* ---------------- Zustand ---------------- */
+  const cfg = Object.assign({stepLenM:0.7, threshold:1.2, minIntervalMs:250, dwellSec:60},
+    JSON.parse(localStorage.getItem("inav.cfg")||"{}"));
+
+  let graph = JSON.parse(localStorage.getItem("inav.graph")||"null") || Core.makeGraph("");
+  let lastWaypointId = null;
+
+  const session = {
+    active:false, startedAt:null,
+    pos:{x:0,y:0}, heading:0, steps:0,
+    lastMoveT:null, lastMovePos:{x:0,y:0},
+    checkoutEvents:[]
+  };
+
+  let sensorsActive=false;
+  let accelBuf=[]; // {t, mag}
+  let lastGyroT=null;
+
+  let shoppingItems = []; // aus localStorage 'sl.items'
+  let plannedRoute = null;
+
+  /* ---------------- Persistenz ---------------- */
+  function saveGraph(){ localStorage.setItem("inav.graph", JSON.stringify(graph)); renderAll(); }
+  function saveCfg(){ localStorage.setItem("inav.cfg", JSON.stringify(cfg)); }
+
+  /* ---------------- Sensor-Layer ---------------- */
+  async function enableSensors(){
+    if(typeof DeviceMotionEvent === "undefined"){
+      toast("DeviceMotionEvent wird von diesem Browser nicht unterstützt.");
+      return false;
+    }
+    try{
+      if(typeof DeviceMotionEvent.requestPermission === "function"){
+        const perm = await DeviceMotionEvent.requestPermission();
+        if(perm !== "granted"){ toast("Zugriff auf Bewegungssensoren wurde abgelehnt."); return false; }
+      }
+      if(typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function"){
+        await DeviceOrientationEvent.requestPermission().catch(()=>{});
+      }
+    }catch(e){
+      toast("Sensor-Freigabe fehlgeschlagen: " + e.message);
+      return false;
+    }
+    window.addEventListener("devicemotion", onDeviceMotion);
+    window.addEventListener("deviceorientation", onDeviceOrientation);
+    sensorsActive = true;
+    updateSensorStatus();
+    return true;
+  }
+
+  function onDeviceMotion(ev){
+    const a = ev.acceleration || ev.accelerationIncludingGravity;
+    if(!a) return;
+    const mag = Math.hypot(a.x||0, a.y||0, a.z||0) / 9.81; // in g
+    const t = performance.now();
+    accelBuf.push({t, mag});
+    if(accelBuf.length > 6) accelBuf.shift();
+    if(accelBuf.length >= 2){
+      const steps = Core.detectSteps(accelBuf.slice(-2), {threshold:cfg.threshold, minIntervalMs:cfg.minIntervalMs});
+      if(steps.length) registerStep();
+    }
+  }
+  function onDeviceOrientation(ev){
+    if(ev.alpha==null) return;
+    // alpha: 0-360°, gegen den Uhrzeigersinn ab Norden – grobe Umrechnung in unser Radiant-Heading.
+    session.heading = Core.wrapAngle((90-ev.alpha) * Math.PI/180);
+  }
+  function registerStep(){
+    session.pos = Core.applyStep(session.pos, session.heading, cfg.stepLenM);
+    session.steps++;
+    session.lastMoveT = Date.now();
+    session.lastMovePos = {...session.pos};
+    updateLiveKpis();
+    checkDwell();
+    drawNavMap();
+  }
+
+  function manualStep(){ registerStep(); }
+  function manualTurn(deltaDeg){ session.heading = Core.wrapAngle(session.heading + deltaDeg*Math.PI/180); updateLiveKpis(); drawNavMap(); }
+
+  function updateSensorStatus(){
+    [["#sensorStatus"], ["#navSensorStatus"]].forEach(([sel])=>{
+      const el=$(sel);
+      if(sensorsActive){ el.className="status ok"; el.textContent="Sensoren aktiv"; }
+      else { el.className="status warn"; el.textContent="Sensoren nicht aktiviert – manuelle Steuerung nutzen"; }
+    });
+  }
+  function updateLiveKpis(){
+    $("#kpiSteps").textContent = session.steps;
+    $("#kpiPos").textContent = session.pos.x.toFixed(1)+" / "+session.pos.y.toFixed(1)+" m";
+    $("#kpiHeading").textContent = rad2deg(session.heading)+"°";
+  }
+
+  /* ---------------- Dwell-Erkennung (Kassen-Hinweis) ---------------- */
+  function checkDwell(){
+    if(!session.active) return;
+    const movedFar = Math.hypot(session.pos.x-session.lastMovePos.x, session.pos.y-session.lastMovePos.y) > 2;
+    if(movedFar){ session.lastMoveT = Date.now(); session.lastMovePos = {...session.pos}; }
+  }
+  setInterval(()=>{
+    if(!session.active || !session.lastMoveT) return;
+    const idleSec = (Date.now()-session.lastMoveT)/1000;
+    const box=$("#dwellHint");
+    if(idleSec >= cfg.dwellSec){
+      box.style.display="block";
+      $("#dwellText").textContent = `Du stehst seit ${Math.round(idleSec)}s an derselben Stelle.`;
+    } else {
+      box.style.display="none";
+    }
+  }, 2000);
+
+  /* ---------------- Kartierung: Wegpunkte/Kanten ---------------- */
+  function fillCategorySelect(sel){
+    sel.innerHTML = Object.entries(Core.CATEGORY_LABELS).map(([k,v])=>`<option value="${k}">${v}</option>`).join("");
+  }
+  function refreshTypeUI(){
+    $("#wpCatWrap").style.display = $("#wpType").value==="category" ? "" : "none";
+  }
+
+  function addWaypoint(){
+    const name = $("#wpName").value.trim();
+    const type = $("#wpType").value;
+    const category = type==="category" ? $("#wpCategory").value : null;
+    const x = Number($("#wpX").value)||0, y = Number($("#wpY").value)||0;
+    if(!name){ toast("Bitte einen Namen für den Wegpunkt eingeben."); return; }
+    const node = {id:uid(), name, type, category, x, y};
+    Core.addNode(graph, node);
+    if($("#wpAutoConnect").checked && lastWaypointId){
+      Core.addEdge(graph, lastWaypointId, node.id);
+    }
+    lastWaypointId = node.id;
+    saveGraph();
+    $("#wpName").value="";
+    toast("Wegpunkt gespeichert: "+name);
+  }
+
+  function removeWaypoint(id){
+    Core.removeNode(graph, id);
+    if(lastWaypointId===id) lastWaypointId=null;
+    saveGraph();
+  }
+
+  function addManualEdge(){
+    const a=$("#edgeA").value, b=$("#edgeB").value;
+    const distRaw = $("#edgeDist").value;
+    const dist = distRaw===""?null:Number(distRaw);
+    if(!a||!b||a===b){ toast("Bitte zwei unterschiedliche Wegpunkte wählen."); return; }
+    const e = Core.addEdge(graph, a, b, dist);
+    if(!e){ toast("Diese Verbindung existiert bereits."); return; }
+    saveGraph();
+  }
+
+  /* ---------------- Rendering: Tabellen/Selects ---------------- */
+  function typeLabel(n){
+    return n.type==="entrance"?"Eingang": n.type==="exit"?"Ausgang": n.type==="checkout"?"Kasse":
+      "Warengruppe: "+(Core.CATEGORY_LABELS[n.category]||n.category);
+  }
+
+  function renderNodeTable(){
+    $("#nodeCount").textContent = graph.nodes.length;
+    const tbody = $("#nodeTable tbody");
+    tbody.innerHTML = graph.nodes.map(n=>`
+      <tr data-id="${n.id}">
+        <td>${escHtml(n.name)}</td>
+        <td>${n.type==="category"?`<span class="pill">${escHtml(Core.CATEGORY_LABELS[n.category]||n.category)}</span>`
+              : n.type==="checkout"?`<span class="pill checkout">Kasse</span>`
+              : `<span class="pill io">${n.type==="entrance"?"Eingang":"Ausgang"}</span>`}</td>
+        <td>${n.x.toFixed(1)}</td>
+        <td>${n.y.toFixed(1)}</td>
+        <td><button class="icon-btn" data-act="del" title="Löschen">🗑️</button></td>
+      </tr>`).join("") || `<tr><td colspan="5" class="muted">Noch keine Wegpunkte.</td></tr>`;
+  }
+  function escHtml(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+  function renderEdgeSelects(){
+    const opts = graph.nodes.map(n=>`<option value="${n.id}">${escHtml(n.name)}</option>`).join("");
+    $("#edgeA").innerHTML = opts; $("#edgeB").innerHTML = opts;
+  }
+
+  /* ---------------- SVG-Kartendarstellung ---------------- */
+  function graphBounds(){
+    if(!graph.nodes.length) return {minX:-1,maxX:1,minY:-1,maxY:1};
+    const xs=graph.nodes.map(n=>n.x), ys=graph.nodes.map(n=>n.y);
+    return {minX:Math.min(...xs,session.pos.x), maxX:Math.max(...xs,session.pos.x),
+            minY:Math.min(...ys,session.pos.y), maxY:Math.max(...ys,session.pos.y)};
+  }
+  function svgFor(containerId, {showDot, routeNodeIds}){
+    // Rechts/oben mehr Platz reservieren als links/unten, damit Knoten-Beschriftungen
+    // (die nach rechts aus dem Punkt herauswachsen) nicht am Rand abgeschnitten werden
+    // -- per Screenshot-Selbstkontrolle gefunden (Label "Tiefkühl" wurde zu "Tie" abgeschnitten).
+    const padL=20, padR=90, padT=24, padB=20, W=560, H=340;
+    const b=graphBounds();
+    const spanX=Math.max(1,b.maxX-b.minX), spanY=Math.max(1,b.maxY-b.minY);
+    const scale=Math.min((W-padL-padR)/spanX, (H-padT-padB)/spanY);
+    const px = x => padL + (x-b.minX)*scale;
+    const py = y => H-padB-(y-b.minY)*scale;
+
+    let s = `<svg class="mapbox" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+    graph.edges.forEach(e=>{
+      const na=graph.nodes.find(n=>n.id===e.a), nb=graph.nodes.find(n=>n.id===e.b);
+      if(!na||!nb) return;
+      const onRoute = routeNodeIds && routeNodeIds.has(e.a) && routeNodeIds.has(e.b);
+      s += `<line x1="${px(na.x)}" y1="${py(na.y)}" x2="${px(nb.x)}" y2="${py(nb.y)}" stroke="${onRoute?"var(--route)":"var(--line)"}" stroke-width="${onRoute?3:2}"/>`;
+    });
+    graph.nodes.forEach(n=>{
+      const special = n.type!=="category";
+      s += `<circle cx="${px(n.x)}" cy="${py(n.y)}" r="${special?7:6}" fill="${special?"var(--node-special)":"var(--node-cat)"}"/>`;
+      s += `<text x="${px(n.x)+9}" y="${py(n.y)+4}" font-size="10" fill="#6b7280">${escHtml(n.name)}</text>`;
+    });
+    if(showDot){
+      s += `<circle cx="${px(session.pos.x)}" cy="${py(session.pos.y)}" r="8" fill="var(--dot)" stroke="#fff" stroke-width="2"/>`;
+      const hx = session.pos.x + Math.cos(session.heading)*0.6, hy = session.pos.y + Math.sin(session.heading)*0.6;
+      s += `<line x1="${px(session.pos.x)}" y1="${py(session.pos.y)}" x2="${px(hx)}" y2="${py(hy)}" stroke="var(--dot)" stroke-width="2"/>`;
+    }
+    s += `</svg>`;
+    $(containerId).innerHTML = s;
+  }
+  function drawSurveyMap(){ svgFor("#surveyMap", {showDot:false}); }
+  function drawNavMap(){
+    const routeSet = plannedRoute ? new Set(plannedRoute.fullPath) : null;
+    svgFor("#navMap", {showDot:true, routeNodeIds:routeSet});
+  }
+
+  /* ---------------- Einkaufsliste-Anbindung ---------------- */
+  function readShoppingList(){
+    let raw = null;
+    try{ raw = localStorage.getItem("sl.items"); }catch(e){}
+    if(raw){
+      try{ shoppingItems = JSON.parse(raw); return true; }catch(e){}
+    }
+    return false;
+  }
+  // Getrennt von readShoppingList(): renderListStatus() liest NICHT selbst aus localStorage,
+  // sondern zeigt nur an, was aktuell in shoppingItems steht. Sonst würde ein manueller Import
+  // sofort wieder von der automatischen localStorage-Lesung überschrieben (Bug, per Test gefunden).
+  function renderListStatus(source){
+    const el = $("#listStatus");
+    const open = shoppingItems.filter(i=>!i.archived && !i.done);
+    if(shoppingItems.length){
+      el.className="status ok";
+      el.textContent = `Verbunden (${source}) · ${open.length} offene Artikel von ${shoppingItems.length}`;
+    } else {
+      el.className="status warn";
+      el.textContent = "Keine Einkaufsliste im localStorage gefunden (andere Origin oder file://-Einschränkung?). Manuell importieren siehe unten.";
+    }
+  }
+  function refreshListStatus(){
+    readShoppingList();
+    renderListStatus("localStorage");
+  }
+  function importListFromTextarea(){
+    try{
+      const arr = JSON.parse($("#listJson").value);
+      if(!Array.isArray(arr)) throw new Error("kein Array");
+      shoppingItems = arr;
+      renderListStatus("manueller Import");
+      toast("Einkaufsliste importiert: "+arr.length+" Artikel");
+    }catch(e){ toast("Ungültiges JSON: "+e.message); }
+  }
+
+  function neededCategories(){
+    const open = shoppingItems.filter(i=>!i.archived && !i.done);
+    return open.map(i=>Core.catalogEntry(i.name).grp);
+  }
+
+  /* ---------------- Route ---------------- */
+  function currentOrEntranceNodeId(){
+    const near = Core.nearestNode(graph, session.pos.x, session.pos.y, ()=>true);
+    if(near) return near.id;
+    const entrance = graph.nodes.find(n=>n.type==="entrance");
+    return entrance ? entrance.id : null;
+  }
+  function planRoute(){
+    if(!graph.nodes.length){ toast("Kein Grundriss vorhanden – erst kartieren."); return; }
+    const fromId = currentOrEntranceNodeId();
+    if(!fromId){ toast("Kein Startpunkt bestimmbar (kein Wegpunkt in der Nähe, kein Eingang markiert)."); return; }
+    const cats = neededCategories();
+    if(!cats.length){ $("#routeSummary").textContent="Keine offenen Artikel auf der Einkaufsliste."; $("#routeOrder").innerHTML=""; return; }
+    plannedRoute = Core.planShoppingRoute(graph, fromId, cats);
+    renderRoute();
+    drawNavMap();
+  }
+  function renderRoute(){
+    if(!plannedRoute) return;
+    const missTxt = plannedRoute.missing.length
+      ? ` · ${plannedRoute.missing.length} Warengruppe(n) nicht auf der Karte: ${plannedRoute.missing.map(c=>Core.CATEGORY_LABELS[c]||c).join(", ")}`
+      : "";
+    $("#routeSummary").textContent = `${plannedRoute.order.length} Stopps · ${plannedRoute.totalDist.toFixed(1)} m Wegstrecke${missTxt}`;
+    $("#routeOrder").innerHTML = plannedRoute.order.map((o,i)=>
+      `<li><span>${i+1}. ${escHtml(o.node.name)}</span><b>${o.distance.toFixed(1)} m</b></li>`).join("");
+    const ambBox = $("#routeAmbiguous");
+    if(plannedRoute.ambiguous.length){
+      ambBox.style.display = "block";
+      ambBox.innerHTML = plannedRoute.ambiguous.map(a =>
+        `Warengruppe „${escHtml(Core.CATEGORY_LABELS[a.cat]||a.cat)}“ liegt an mehreren Zonen (${a.nodeNames.map(escHtml).join(", ")}) – `+
+        `es wird nur die nächstgelegene angefahren, der Artikel könnte auch in einer der anderen liegen.`
+      ).join("<br>");
+    } else {
+      ambBox.style.display = "none"; ambBox.innerHTML = "";
+    }
+  }
+
+  /* ---------------- Session-Aktionen ---------------- */
+  function startTrip(){
+    const entrance = graph.nodes.find(n=>n.type==="entrance");
+    session.active=true; session.startedAt=Date.now();
+    session.pos = entrance ? {x:entrance.x, y:entrance.y} : {x:0,y:0};
+    session.heading=0; session.steps=0; session.lastMoveT=Date.now(); session.lastMovePos={...session.pos};
+    session.checkoutEvents=[];
+    updateLiveKpis(); drawNavMap();
+    toast(entrance ? "Einkauf gestartet am Eingang." : "Einkauf gestartet (kein Eingang markiert, Start bei 0,0).");
+  }
+  function checkoutReached(){
+    session.checkoutEvents.push({t:Date.now(), x:session.pos.x, y:session.pos.y});
+    $("#dwellHint").style.display="none";
+    toast("Kassen-Ereignis erfasst.");
+  }
+  function endTrip(){
+    session.active=false;
+    toast("Einkauf beendet.");
+  }
+
+  /* ---------------- Wiring ---------------- */
+  document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>{
+    document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+    document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+    t.classList.add("active");
+    $("#view-"+t.dataset.view).classList.add("active");
+    if(t.dataset.view==="nav"){ refreshListStatus(); drawNavMap(); }
+    if(t.dataset.view==="survey"){ drawSurveyMap(); }
+  }));
+
+  $("#wpType").addEventListener("change", refreshTypeUI);
+  $("#btnAddWaypoint").addEventListener("click", addWaypoint);
+  $("#btnAddEdge").addEventListener("click", addManualEdge);
+  $("#btnUseLivePos").addEventListener("click", ()=>{ $("#wpX").value=session.pos.x.toFixed(2); $("#wpY").value=session.pos.y.toFixed(2); });
+  $("#btnResetGraph").addEventListener("click", ()=>{
+    if(!confirm("Grundriss wirklich löschen?")) return;
+    graph = Core.makeGraph($("#storeName").value); lastWaypointId=null; saveGraph(); toast("Grundriss gelöscht.");
+  });
+  $("#storeName").addEventListener("change", e=>{ graph.storeName=e.target.value; saveGraph(); });
+
+  $("#nodeTable").addEventListener("click", e=>{
+    const btn=e.target.closest("[data-act=del]"); if(!btn) return;
+    const tr=e.target.closest("tr"); removeWaypoint(tr.dataset.id);
+  });
+
+  $("#btnEnableSensors").addEventListener("click", enableSensors);
+  $("#btnEnableSensorsNav").addEventListener("click", enableSensors);
+  $("#btnStepFwd").addEventListener("click", manualStep);
+  $("#btnTurnL").addEventListener("click", ()=>manualTurn(-15));
+  $("#btnTurnR").addEventListener("click", ()=>manualTurn(15));
+
+  $("#btnRefreshList").addEventListener("click", refreshListStatus);
+  $("#btnImportList").addEventListener("click", importListFromTextarea);
+
+  $("#btnPlanRoute").addEventListener("click", planRoute);
+  $("#btnStartTrip").addEventListener("click", startTrip);
+  $("#btnCheckout").addEventListener("click", checkoutReached);
+  $("#btnEndTrip").addEventListener("click", endTrip);
+  $("#btnConfirmCheckoutDwell").addEventListener("click", checkoutReached);
+
+  $("#btnExportGraph").addEventListener("click", ()=>{ $("#graphJson").value = JSON.stringify(graph, null, 2); });
+  $("#btnImportGraph").addEventListener("click", ()=>{
+    try{ graph = JSON.parse($("#graphJson").value); lastWaypointId=null; saveGraph(); toast("Grundriss importiert."); }
+    catch(e){ toast("Ungültiges JSON: "+e.message); }
+  });
+  $("#btnDownloadGraph").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(graph,null,2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = (graph.storeName||"grundriss").replace(/[^a-z0-9_-]+/gi,"_") + ".json";
+    a.click();
+  });
+
+  $("#btnSaveSettings").addEventListener("click", ()=>{
+    cfg.stepLenM = Number($("#cfgStepLen").value)||0.7;
+    cfg.threshold = Number($("#cfgThreshold").value)||1.2;
+    cfg.minIntervalMs = Number($("#cfgMinInterval").value)||250;
+    cfg.dwellSec = Number($("#cfgDwellSec").value)||60;
+    saveCfg(); toast("Einstellungen gespeichert.");
+  });
+
+  /* ---------------- Init ---------------- */
+  function renderAll(){
+    $("#graphMeta").textContent = graph.nodes.length
+      ? `${graph.storeName||"Unbenannter Markt"} · ${graph.nodes.length} Wegpunkte · ${graph.edges.length} Kanten`
+      : "Kein Grundriss geladen";
+    renderNodeTable(); renderEdgeSelects(); drawSurveyMap(); drawNavMap();
+  }
+
+  fillCategorySelect($("#wpCategory"));
+  refreshTypeUI();
+  $("#storeName").value = graph.storeName||"";
+  $("#cfgStepLen").value = cfg.stepLenM; $("#cfgThreshold").value=cfg.threshold;
+  $("#cfgMinInterval").value=cfg.minIntervalMs; $("#cfgDwellSec").value=cfg.dwellSec;
+  updateSensorStatus(); updateLiveKpis();
+  renderAll();
+  refreshListStatus();
+
+  $("#testProtocol").innerHTML = [
+    "<b>Node-Unit-Tests (Kernlogik, aus obigem Core-Script-Block extrahiert, kein manuelles Duplikat):</b> Dijkstra-Kürzeste-Wege auf synthetischen Graphen, Schritterkennung gegen synthetische Beschleunigungs-Zeitreihen, Heading-Filter-Konvergenz, Kategorisierung (Parität mit einkaufsliste_4_.html), Routenplanung inkl. fehlender/unerreichbarer Warengruppen.",
+    "<b>Browser-Tests (Playwright, echtes Chromium, lokal ohne Netzwerk):</b> alle Buttons in Kartierung/Navigation/Einstellungen durchgeklickt, Wegpunkt-/Kanten-Erstellung, Import/Export-Rundlauf, localStorage-Anbindung an eine echte Kopie von einkaufsliste_4_.html (im selben Verzeichnis, Chromium teilt hier den file://-Storage – siehe Hinweis unten), manueller JSON-Fallback-Import, synthetische devicemotion-Events zur Prüfung der Schritt-/Positionslogik.",
+    "<b>Nicht testbar in dieser Umgebung:</b> reales Gerät/reale Sensoren (kein Zugriff), tatsächliches Gehverhalten/Schrittlänge einer Person, iOS-Berechtigungsdialog (existiert nur auf echtem iOS Safari), tatsächliches Verhalten des Magnetometers in der realen Marktumgebung, Verhalten in Firefox/Safari bei file://-localStorage (laut MDN/WHATWG ist das Verhalten für file:// nicht spezifiziert und browserabhängig – in Chromium hier funktionierend getestet, für Firefox/Safari nicht verifizierbar ohne diese Browser)."
+  ].join("<br><br>");
+})();
+</script>
+
+<script>
+/* ============================================================
+   PWA-Installationsschicht: Service-Worker-Registrierung,
+   Install-Hinweis, Diagnose. Bewusst getrennt vom App-Script
+   oben, damit ein Fehler hier nie die eigentliche App blockiert.
+   ============================================================ */
+(function(){
+  "use strict";
+  function $(s){ return document.querySelector(s); }
+
+  // Install-Hinweis nur zeigen, wenn erkennbar iOS Safari im Browser-Tab
+  // (nicht bereits als Home-Bildschirm-App gestartet). navigator.standalone
+  // ist eine iOS-Safari-spezifische, nicht standardisierte Eigenschaft.
+  try{
+    if (window.navigator && window.navigator.standalone === false) {
+      const b = $("#installBanner");
+      if (b) b.style.display = "block";
+    }
+  }catch(e){}
+
+  function renderInstallDiag(){
+    const el = $("#installDiag");
+    if(!el) return;
+    const isStandalone = (window.navigator && window.navigator.standalone === true)
+      || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+    const secure = window.isSecureContext === true;
+    const swSupported = "serviceWorker" in navigator;
+    let swStatus = swSupported ? "wird geprüft…" : "vom Browser nicht unterstützt";
+    el.innerHTML = [
+      "<b>Anzeigemodus:</b> " + (isStandalone ? "Standalone (als App installiert)" : "Browser-Tab (noch nicht installiert oder gerade über Safari geöffnet)"),
+      "<b>Herkunft:</b> " + location.origin + location.pathname,
+      "<b>Sicherer Kontext (HTTPS/localhost):</b> " + (secure ? "ja" : "nein – Sensoren und Service-Worker funktionieren dann nicht zuverlässig"),
+      "<b>Service Worker:</b> <span id='swStatusText'>" + swStatus + "</span>"
+    ].join("<br>");
+  }
+  renderInstallDiag();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js", {scope: "./"})
+        .then(reg => {
+          const t = document.querySelector("#swStatusText");
+          if(t) t.textContent = "registriert (Scope: " + reg.scope + ")";
+        })
+        .catch(err => {
+          const t = document.querySelector("#swStatusText");
+          if(t) t.textContent = "Registrierung fehlgeschlagen: " + err.message;
+        });
+    });
+  }
+})();
+</script>
+</body>
+</html>
